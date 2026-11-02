@@ -1,0 +1,32 @@
+name: Build patched Lightpanda binary
+
+on:
+  push:
+    branches:
+      - ci/textarea-scrollheight-binary
+
+permissions:
+  contents: read
+
+jobs:
+  build-test-binary:
+    runs-on: ubuntu-latest
+    timeout-minutes: 50
+    steps:
+      - uses: actions/checkout@v4
+      - uses: ./.github/actions/install
+      - name: Formatting
+        run: zig fmt --check ./
+      - name: Run browser regression tests
+        run: zig build -Dprebuilt_v8_path=v8/libc_v8.a -j2 test
+      - name: Build optimized binary
+        run: zig build -Dprebuilt_v8_path=v8/libc_v8.a -Doptimize=ReleaseFast -j2
+      - name: Describe binary
+        run: file zig-out/bin/lightpanda && sha256sum zig-out/bin/lightpanda
+      - name: Upload patched binary
+        uses: actions/upload-artifact@v4
+        with:
+          name: lightpanda-textarea-scrollheight-linux-x86_64
+          path: zig-out/bin/lightpanda
+          retention-days: 2
+          if-no-files-found: error
